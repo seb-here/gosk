@@ -6,6 +6,7 @@ type Parameter struct {
 	DefaultValue string `json:"defaultValue"`
 }
 
+// DefaultParameter returns Paramter with name `input`
 func DefaultParameter() Parameter {
 	return Parameter{
 		Name: "input",
@@ -16,6 +17,7 @@ type Input struct {
 	Parameters []Parameter `json:"parameters"`
 }
 
+// DefaultInput returns Input with a default parameter generated with `DefaultParameter()`
 func DefaultInput() Input {
 	return Input{
 		Parameters: []Parameter{DefaultParameter()},

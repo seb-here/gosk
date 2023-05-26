@@ -1,11 +1,11 @@
 package gosk
 
 import (
+	"bytes"
 	"embed"
 	"encoding/json"
 	"io/fs"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"text/template"
 
@@ -14,7 +14,7 @@ import (
 	"github.com/mfmayer/gosk/utils"
 )
 
-//go:embed skills/*
+//go:embed assets/skills/*
 var embeddedSkillsDir embed.FS
 
 // SemanticKernel
@@ -55,7 +55,7 @@ func NewKernel(opts ...newKernelOption) (kernel *SemanticKernel, err error) {
 }
 
 func (k *SemanticKernel) ImportSkill(name string) (skill Skill, err error) {
-	fs, err := fs.Sub(embeddedSkillsDir, "skills")
+	fs, err := fs.Sub(embeddedSkillsDir, "assets/skills")
 	if err != nil {
 		return
 	}
@@ -69,30 +69,32 @@ func (k *SemanticKernel) importSkill(fsys fs.FS, skillName string) (skill Skill,
 			return err
 		}
 		if d.IsDir() && path != skillName {
+			skPromptPath := filepath.Join(path, "skprompt.txt")
+			skConfigPath := filepath.Join(path, "config.json")
+			if !utils.FilesExist(fsys, skPromptPath) {
+				// ignore path when there is no prompt (config.json is optional)
+				return nil
+			}
 			// read skill prompt template
-			skprompt, err := template.ParseFS(fsys, filepath.Join(path, "skprompt.txt"))
+			skprompt, err := template.ParseFS(fsys, skPromptPath)
 			_ = skprompt
 			if err != nil {
 				return err
 			}
-			// read skill config
-			jsonFile, err := fsys.Open(filepath.Join(path, "config.json"))
-			if err != nil {
-				return err
-			}
-			defer jsonFile.Close()
-			sConfigBytes, _ := ioutil.ReadAll(jsonFile)
+			// create default config and read optional skill config file
 			sConfig := skillconfig.DefaultSkillConfig()
-			err = json.Unmarshal(sConfigBytes, &sConfig)
-			if err != nil {
-				return err
+			jsonFile, err := fsys.Open(skConfigPath)
+			if err == nil {
+				defer jsonFile.Close()
+				sConfigBytes, _ := ioutil.ReadAll(jsonFile)
+				_ = json.Unmarshal(sConfigBytes, &sConfig)
+				// if err != nil {
+				// 	return err
+				// }
 			}
-
 			// use path base name as skill function name
 			skillFunctionName := filepath.Base(path)
 			skill[skillFunctionName] = k.createSkillFunction(skprompt, sConfig)
-			//templates[dirName] = subDirTemplate
-			_ = skillFunctionName
 		}
 		return nil
 	})
@@ -108,14 +110,31 @@ func (k *SemanticKernel) createSkillFunction(template *template.Template, config
 		paramArray = append(paramArray, &param)
 	}
 
-	skillFunc = func(parameters ...string) string {
+	skillFunc = func(parameters ...string) (response string, err error) {
 		for i, param := range parameters {
 			if i < len(paramArray) {
 				*paramArray[i] = param
 			}
 		}
-		template.Execute(os.Stdout, paramMap)
-		return ""
+
+		var promptBuffer bytes.Buffer
+		template.Execute(&promptBuffer, paramMap)
+
+		chatPrompt := gopenai.ChatPrompt{
+			Model: "gpt-3.5-turbo",
+			Messages: []*gopenai.Message{
+				{
+					Role:    "user",
+					Content: promptBuffer.String(),
+				},
+			},
+		}
+		var completion *gopenai.ChatCompletion
+		completion, err = k.chatClient.GetChatCompletion(&chatPrompt)
+		if err == nil {
+			response = completion.Choices[0].Message.Content
+		}
+		return
 	}
 	return
 }
