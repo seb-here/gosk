@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/mfmayer/gosk"
+	"github.com/seb-here/gosk"
 )
 
 func TestKernel(t *testing.T) {

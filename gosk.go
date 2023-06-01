@@ -10,8 +10,8 @@ import (
 	"text/template"
 
 	"github.com/mfmayer/gopenai"
-	"github.com/mfmayer/gosk/internal/skillconfig"
-	"github.com/mfmayer/gosk/utils"
+	"github.com/seb-here/gosk/internal/skillconfig"
+	"github.com/seb-here/gosk/utils"
 )
 
 // SemanticKernel

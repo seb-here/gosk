@@ -1,4 +1,4 @@
-module github.com/mfmayer/gosk
+module github.com/seb-here/gosk
 
 go 1.19
 
