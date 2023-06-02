@@ -25,9 +25,10 @@ func TestSkillImport(t *testing.T) {
 		t.Fatal(err)
 	}
 	sf := skill["Joke"]
-	response, err := sf("Engineer", "")
+	response, tokenCount, err := sf("Engineer", "")
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Printf("Token count: %v\n", tokenCount)
 	fmt.Printf("%v\n", response)
 }

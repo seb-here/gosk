@@ -107,7 +107,7 @@ func (k *SemanticKernel) createSkillFunction(template *template.Template, config
 		paramArray = append(paramArray, &param)
 	}
 
-	skillFunc = func(parameters ...string) (response string, err error) {
+	skillFunc = func(parameters ...string) (response string, tokenCount int, err error) {
 		for i, param := range parameters {
 			if i < len(paramArray) {
 				*paramArray[i] = param
@@ -130,6 +130,7 @@ func (k *SemanticKernel) createSkillFunction(template *template.Template, config
 		completion, err = k.chatClient.GetChatCompletion(&chatPrompt)
 		if err == nil {
 			response = completion.Choices[0].Message.Content
+			tokenCount = completion.Usage.TotalTokens
 		}
 		return
 	}
